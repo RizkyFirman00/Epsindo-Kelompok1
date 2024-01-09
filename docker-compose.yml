@@ -13,7 +13,7 @@ services:
     command: >
       bash -c "
         a2enmod rewrite &&
-        echo 'ServerName 192.29.7.11' >> /etc/apache2/apache2.conf &&
+        echo 'ServerName [IP_ADDRESS]' >> /etc/apache2/apache2.conf &&
         echo '<IfModule mod_rewrite.c>' > /var/www/html/.htaccess &&
         echo '    RewriteEngine On' >> /var/www/html/.htaccess &&
         echo '    RewriteBase /' >> /var/www/html/.htaccess &&
