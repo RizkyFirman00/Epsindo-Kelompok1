@@ -1,0 +1,69 @@
+version: '3'
+
+services:
+  php-apache:
+    image: php:7.2-apache
+    volumes:
+      - ./chamilo:/var/www/html/chamilo
+    ports:
+      - "8080:80"
+    restart: always
+    depends_on:
+      - mariadb
+    command: >
+      bash -c "
+        a2enmod rewrite &&
+        echo 'ServerName 192.29.7.11' >> /etc/apache2/apache2.conf &&
+        echo '<IfModule mod_rewrite.c>' > /var/www/html/.htaccess &&
+        echo '    RewriteEngine On' >> /var/www/html/.htaccess &&
+        echo '    RewriteBase /' >> /var/www/html/.htaccess &&
+        echo '    RewriteRule ^index\.php$ - [L]' >> /var/www/html/.htaccess &&
+        echo '    RewriteCond %{REQUEST_FILENAME} !-f' >> /var/www/html/.htaccess &&
+        echo '    RewriteCond %{REQUEST_FILENAME} !-d' >> /var/www/html/.htaccess &&
+        echo '    RewriteRule . /index.php [L]' >> /var/www/html/.htaccess &&
+        chmod -R 755 /var/www/html/chamilo &&
+        chown -R www-data:www-data /var/www/html/chamilo &&
+        echo '<Directory />' > /etc/apache2/sites-available/000-default.conf &&
+        echo '    AllowOverride All' >> /etc/apache2/sites-available/000-default.conf &&
+        echo '    Require all granted' >> /etc/apache2/sites-available/000-default.conf &&
+        echo '</Directory>' >> /etc/apache2/sites-available/000-default.conf &&
+        echo '<Directory /var/www/html/chamilo/>' >> /etc/apache2/sites-available/000-default.conf &&
+        echo '    AllowOverride All' >> /etc/apache2/sites-available/000-default.conf &&
+        echo '    Require all granted' >> /etc/apache2/sites-available/000-default.conf &&
+        echo '</Directory>' >> /etc/apache2/sites-available/000-default.conf &&
+        service apache2 restart &&
+        docker-php-ext-install pdo_mysql &&
+        apt-get update && apt-get install -y libzip-dev && docker-php-ext-install zip &&
+        apt-get update && apt-get install -y libfreetype6-dev libjpeg62-turbo-dev libpng-dev && docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/ --with-png-dir=/usr/include/ && docker-php-ext-install gd &&
+        apt-get update && apt-get install -y libicu-dev && docker-php-ext-install intl &&
+        apache2-foreground
+      "
+
+  mariadb:
+    image: mariadb:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: chamilo
+      MYSQL_DATABASE: chamilo
+      MYSQL_USER: chamilo
+      MYSQL_PASSWORD: chamilo
+    volumes:
+      - mariadb_data:/var/lib/mariadb
+    restart: always
+
+
+  jupyterhub:
+    image: jupyterhub/jupyterhub
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./jupyterhub:/srv/jupyterhub
+    command: >
+      bash -c "
+        adduser --disabled-password --gecos '' admin &&
+        echo 'admin:admin' | chpasswd &&
+        pip install notebook &&
+        jupyterhub
+      "
+
+volumes:
+  mariadb_data:
